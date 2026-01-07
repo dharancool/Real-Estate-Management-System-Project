@@ -711,16 +711,16 @@ This project is developed for educational purposes as part of the CS 5200 Databa
 
 ## Contributors
 
-- Vaibhav Sankaran
 - Gangatharan Idayachandiran
+- Vaibhav Sankaran
 
 ---
 
 ## Support
 
 For issues or questions:
-- **Email:** vaibhavsankaran24@gmail.com
 - **Email:** gangatharan8403@gmail.com
+- **Email:** vaibhavsankaran24@gmail.com
 - **Course:** CS 5200 - Database Management Systems
 - **Institution:** Northeastern University
 
