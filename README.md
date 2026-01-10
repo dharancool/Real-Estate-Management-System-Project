@@ -5,7 +5,7 @@
 A comprehensive web-based Real Estate Database Management System built with Django and MySQL. This application facilitates property listings, client management, agent operations, appointment scheduling, and transaction tracking for the real estate industry.
 
 ### Developed By
-- **Group Members:** Vaibhav Sankaran, Gangatharan Idayachandiran
+- **Group Members:** Gangatharan Idayachandiran, Vaibhav Sankaran
 - **Course:** CS 5200 - Database Management Systems
 - **Institution:** Northeastern University
 - **Semester:** Fall 2025
