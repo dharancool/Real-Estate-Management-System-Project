@@ -1,5 +1,12 @@
 # Real Estate Database Management System
 
+<img width="1345" height="785" alt="image" src="https://github.com/user-attachments/assets/df04cd12-b6c7-435c-8040-704ee6ef30a4" />
+<img width="1151" height="519" alt="image" src="https://github.com/user-attachments/assets/ebeca630-df39-44b5-82f9-11151cd7223a" />
+<img width="1217" height="754" alt="image" src="https://github.com/user-attachments/assets/66e4de5e-3adf-469c-97f0-289387b5e404" />
+
+
+
+
 ## Project Overview
 
 A comprehensive web-based Real Estate Database Management System built with Django and MySQL. This application facilitates property listings, client management, agent operations, appointment scheduling, and transaction tracking for the real estate industry.
