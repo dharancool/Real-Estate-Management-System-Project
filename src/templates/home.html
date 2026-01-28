@@ -2,17 +2,93 @@
 {% load static %}
 {% block title %}Home - Real Estate DBMS{% endblock %}
 
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+<style>
+    #map {
+        height: 300px;
+        width: 100%;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .property-popup {
+        min-width: 250px;
+    }
+    
+    .property-popup img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    
+    .property-popup h6 {
+        margin: 5px 0;
+        font-weight: bold;
+    }
+    
+    .property-popup .price {
+        color: #0d6efd;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    
+    .property-popup .details {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin: 5px 0;
+    }
+    
+    .no-properties-message {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        text-align: center;
+    }
+    
+    .map-info-box {
+        background: black;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .city-filter {
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- Hero Section -->
+<!-- Hero Section with Map -->
 <div class="hero-section">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-lg-6">
+            <div class="col-lg-5">
                 <h1 class="display-4 fw-bold mb-4">Find Your Dream Property</h1>
-                <p class="lead mb-4">Discover the perfect home or investment opportunity with our comprehensive real estate database management system.</p>
+                <p class="lead mb-4">Discover the perfect home or investment opportunity. Click on the map to explore properties by location.</p>
+                
+                <div class="map-info-box">
+                    <h6><i class="bi bi-info-circle"></i> How to Use:</h6>
+                    <ul class="small mb-0">
+                        <li>Click on map markers to see available properties</li>
+                        <li>Use the city filter to narrow your search</li>
+                        <li>Zoom and pan to explore different areas</li>
+                    </ul>
+                </div>
+                
                 <div class="d-grid gap-2 d-md-flex">
                     <a href="{% url 'property_list' %}" class="btn btn-light btn-lg px-4 me-md-2">
-                        <i class="bi bi-search"></i> Browse Properties
+                        <i class="bi bi-list"></i> List View
                     </a>
                     {% if not user.is_authenticated %}
                     <a href="{% url 'register' %}" class="btn btn-outline-light btn-lg px-4">
@@ -21,8 +97,25 @@
                     {% endif %}
                 </div>
             </div>
-            <div class="col-lg-6 text-center">
-                <img src="{% static 'images/home.jpg' %}" alt="Real Estate" class="img-fluid rounded shadow" style="max-height: 400px;">
+            
+            <div class="col-lg-7">
+                <!-- City Filter -->
+                <div class="city-filter">
+                    <select id="cityFilter" class="form-select form-select-lg">
+                        <option value="">All Cities</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                
+                <!-- Map Container -->
+                <div id="map"></div>
+                
+                <!-- Property Count Display -->
+                <!-- <div id="propertyCount" class="mt-3 text-center">
+                    <span class="badge bg-primary" style="font-size: 1rem;">
+                        Loading properties...
+                    </span> -->
+                </div>
             </div>
         </div>
     </div>
@@ -176,4 +269,167 @@
     </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+    let map;
+    let markers = L.markerClusterGroup();
+    let allProperties = [];
+    
+    // Initialize map centered on Massachusetts
+    function initMap() {
+        map = L.map('map').setView([42.4072, -71.3824], 9);
+        
+        // Add OpenStreetMap tiles (free, no API key needed)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+    }
+    
+    // Load cities for filter dropdown
+    function loadCities() {
+        fetch('/api/cities/')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('cityFilter');
+                data.cities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.city;
+                    option.textContent = `${city.city}, ${city.state} (${city.property_count})`;
+                    select.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error loading cities:', error));
+    }
+    
+    // Load and display properties on map
+    function loadProperties(city = '') {
+        const url = city ? `/api/map-properties/?city=${encodeURIComponent(city)}` : '/api/map-properties/';
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                allProperties = data.properties;
+                updateMap(data.properties);
+                updatePropertyCount(data.count, city);
+            })
+            .catch(error => {
+                console.error('Error loading properties:', error);
+                document.getElementById('propertyCount').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error loading properties. Please refresh the page.
+                    </div>
+                `;
+            });
+    }
+    
+    // Update map with property markers
+    function updateMap(properties) {
+        // Clear existing markers
+        markers.clearLayers();
+        
+        if (properties.length === 0) {
+            return;
+        }
+        
+        // Group properties by exact location to handle multiple properties at same address
+        const locationGroups = {};
+        properties.forEach(prop => {
+            const key = `${prop.latitude},${prop.longitude}`;
+            if (!locationGroups[key]) {
+                locationGroups[key] = [];
+            }
+            locationGroups[key].push(prop);
+        });
+        
+        // Create markers
+        Object.values(locationGroups).forEach(propGroup => {
+            const prop = propGroup[0]; // Use first property for coordinates
+            const marker = L.marker([prop.latitude, prop.longitude]);
+            
+            // Create popup content
+            let popupContent = '<div class="property-popup">';
+            
+            if (propGroup.length > 1) {
+                popupContent += `<h6>${propGroup.length} Properties at this location</h6>`;
+            }
+            
+            propGroup.forEach((property, index) => {
+                if (index > 0) popupContent += '<hr>';
+                
+                popupContent += `
+                    ${property.primary_image ? `<img src="${property.primary_image}" alt="${property.title}" onerror="this.src='/static/images/placeholder.jpg'">` : ''}
+                    <h6>${property.title}</h6>
+                    <div class="price">$${property.price.toLocaleString()}${property.listing_type === 'rent' ? '/mo' : ''}</div>
+                    <div class="details">
+                        <i class="bi bi-geo-alt"></i> ${property.street_address}, ${property.city}, ${property.state}<br>
+                        <i class="bi bi-house"></i> ${property.property_type}<br>
+                        <i class="bi bi-door-closed"></i> ${property.bedrooms} beds 
+                        <i class="bi bi-droplet"></i> ${property.bathrooms} baths 
+                        ${property.square_feet ? `<i class="bi bi-arrows-angle-expand"></i> ${property.square_feet} sqft` : ''}
+                    </div>
+                    <a href="/properties/${property.property_id}/" class="btn btn-primary btn-sm w-100 mt-2">
+                        View Details <i class="bi bi-arrow-right"></i>
+                    </a>
+                `;
+            });
+            
+            popupContent += '</div>';
+            
+            marker.bindPopup(popupContent, {
+                maxWidth: 300,
+                className: 'property-popup-container'
+            });
+            
+            markers.addLayer(marker);
+        });
+        
+        map.addLayer(markers);
+        
+        // Fit map to show all markers
+        if (properties.length > 0) {
+            map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+        }
+    }
+    
+    // Update property count display
+    function updatePropertyCount(count, city) {
+        const countDiv = document.getElementById('propertyCount');
+        
+        if (count === 0) {
+            const locationText = city ? `in ${city}` : 'in this area';
+            countDiv.innerHTML = `
+                <div class="no-properties-message">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <strong>No available properties ${locationText}</strong>
+                    <p class="mb-0 mt-2">Try selecting a different city or <a href="{% url 'property_list' %}">browse all properties</a></p>
+                </div>
+            `;
+        } else {
+            const locationText = city ? ` in ${city}` : '';
+            countDiv.innerHTML = `
+                <span class="badge bg-success" style="font-size: 1rem;">
+                    <i class="bi bi-houses"></i> ${count} Available ${count === 1 ? 'Property' : 'Properties'}${locationText}
+                </span>
+            `;
+        }
+    }
+    
+    // City filter change handler
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap();
+        loadCities();
+        loadProperties();
+        
+        document.getElementById('cityFilter').addEventListener('change', function() {
+            loadProperties(this.value);
+        });
+    });
+</script>
 {% endblock %}

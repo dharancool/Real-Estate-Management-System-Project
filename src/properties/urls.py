@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 
+
 urlpatterns = [
     # Home and Dashboard
     path('', views.home_view, name='home'),
@@ -44,4 +45,9 @@ urlpatterns = [
     
     # Analytics 
     path('analytics/', views.analytics_view, name='analytics'),
+
+    # Map API endpoints
+    path('api/map-properties/', views.map_properties_api, name='map_properties_api'),
+    path('api/cities/', views.get_cities_with_properties, name='get_cities'),
+
 ]

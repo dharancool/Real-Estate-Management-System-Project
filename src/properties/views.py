@@ -1,8 +1,8 @@
 """
 Real Estate DBMS - Django Views
-100% Raw PyMySQL - NO ORM ANYWHERE
-All database operations use raw SQL queries
 """
+from django.http import JsonResponse
+import json
 
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -979,3 +979,87 @@ def analytics_view(request):
     analytics_data = db_utils.get_analytics_data()
     
     return render(request, 'analytics/analytics.html', analytics_data)
+
+
+
+def map_properties_api(request):
+    """API endpoint to return properties with coordinates for map"""
+    city = request.GET.get('city', '')
+    
+    # Build query with optional city filter
+    query = """
+        SELECT 
+            p.property_id,
+            p.title,
+            p.price,
+            p.listing_type,
+            p.bedrooms,
+            p.bathrooms,
+            p.square_feet,
+            p.status,
+            l.city,
+            l.state,
+            l.latitude,
+            l.longitude,
+            l.street_address,
+            pt.type_name as property_type
+        FROM Properties p
+        JOIN Locations l ON p.location_id = l.location_id
+        JOIN PropertyTypes pt ON p.property_type_id = pt.property_type_id
+        WHERE p.status = 'available'
+        AND l.latitude IS NOT NULL 
+        AND l.longitude IS NOT NULL
+    """
+    
+    params = []
+    if city:
+        query += " AND l.city = %s"
+        params.append(city)
+    
+    properties = db_utils.execute_query(query, params)
+    
+    # Get primary image for each property
+    for prop in properties:
+        images = db_utils.get_property_images(prop['property_id'])
+        prop['primary_image'] = next(
+            (img['image_url'] for img in images if img['is_primary']), 
+            images[0]['image_url'] if images else None
+        )
+        # Convert Decimal to float for JSON serialization
+        prop['price'] = float(prop['price'])
+        prop['latitude'] = float(prop['latitude'])
+        prop['longitude'] = float(prop['longitude'])
+        if prop['square_feet']:
+            prop['square_feet'] = int(prop['square_feet'])
+    
+    return JsonResponse({
+        'properties': properties,
+        'count': len(properties)
+    })
+
+
+def get_cities_with_properties(request):
+    """API endpoint to get all cities that have properties"""
+    query = """
+        SELECT DISTINCT l.city, l.state, l.latitude, l.longitude,
+               COUNT(p.property_id) as property_count
+        FROM Locations l
+        JOIN Properties p ON l.location_id = p.location_id
+        WHERE p.status = 'available'
+        AND l.latitude IS NOT NULL 
+        AND l.longitude IS NOT NULL
+        GROUP BY l.city, l.state, l.latitude, l.longitude
+        ORDER BY property_count DESC
+    """
+    
+    cities = db_utils.execute_query(query)
+    
+    # Convert Decimal to float for JSON
+    for city in cities:
+        city['latitude'] = float(city['latitude'])
+        city['longitude'] = float(city['longitude'])
+    
+    return JsonResponse({
+        'cities': cities,
+        'count': len(cities)
+    })
