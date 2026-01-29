@@ -159,3 +159,8 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+
+    CSRF_TRUSTED_ORIGINS = [
+        'https://web-production-75e83.up.railway.app',
+        'https://*.railway.app',
+    ]
