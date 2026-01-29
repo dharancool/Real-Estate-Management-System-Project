@@ -14,11 +14,11 @@ def get_db_connection():
     """Create and return a database connection using PyMySQL"""
     try:
         connection = pymysql.connect(
-            host=os.getenv('DB_HOST', 'localhost'),
-            user=os.getenv('DB_USER', 'root'),
-            password=os.getenv('DB_PASSWORD', ''),
-            database=os.getenv('DB_NAME', 'real_estate_db'),
-            port=int(os.getenv('DB_PORT', 3306)),
+            host=os.getenv('MYSQL_HOST', os.getenv('DB_HOST', 'localhost')),
+            user=os.getenv('MYSQL_USER', os.getenv('DB_USER', 'root')),
+            password=os.getenv('MYSQL_PASSWORD', os.getenv('DB_PASSWORD', '')),
+            database=os.getenv('MYSQL_DATABASE', os.getenv('DB_NAME', 'real_estate_db')),
+            port=int(os.getenv('MYSQL_PORT', os.getenv('DB_PORT', '3306'))),
             charset='utf8mb4',
             cursorclass=DictCursor,
             autocommit=False
