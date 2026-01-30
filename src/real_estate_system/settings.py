@@ -162,5 +162,6 @@ if not DEBUG:
 
     CSRF_TRUSTED_ORIGINS = [
         'https://web-production-75e83.up.railway.app',
+        'https://realestate-gangatharan.up.railway.app/',
         'https://*.railway.app',
     ]
